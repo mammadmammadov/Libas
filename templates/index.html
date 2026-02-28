@@ -1,0 +1,2437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👔</text></svg>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Libas — Daily Outfit Planner</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F6F1EB;
+            --bg-card: #FFFCF8;
+            --bg-warm: #EDE6DC;
+            --text: #2C2520;
+            --text-light: #8C7E72;
+            --text-mid: #5E534A;
+            --accent: #C4703F;
+            --accent-light: #E8A87C;
+            --accent-dark: #9B5530;
+            --accent-glow: rgba(196, 112, 63, 0.12);
+            --danger: #C75050;
+            --success: #5B8C5A;
+            --border: #E2D9CF;
+            --border-light: #EDE6DC;
+            --shadow: 0 2px 20px rgba(44, 37, 32, 0.06);
+            --shadow-lg: 0 8px 40px rgba(44, 37, 32, 0.1);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-lg: 20px;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C4703F' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 0 32px;
+        }
+
+        .header {
+            padding: 40px 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 36px;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text);
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .header-date {
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            color: var(--text-light);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 36px;
+            background: var(--bg-warm);
+            padding: 5px;
+            border-radius: var(--radius);
+            width: fit-content;
+        }
+
+        .nav-tab {
+            padding: 10px 22px;
+            border: none;
+            background: transparent;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-light);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            letter-spacing: 0.2px;
+        }
+
+        .nav-tab:hover {
+            color: var(--text);
+        }
+
+        .nav-tab.active {
+            background: var(--bg-card);
+            color: var(--text);
+            box-shadow: 0 1px 6px rgba(44, 37, 32, 0.08);
+        }
+
+        .panel {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .outfit-display {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 48px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .outfit-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light), var(--accent));
+        }
+
+        .outfit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+        }
+
+        .outfit-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .outfit-subtitle {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-top: 4px;
+            font-weight: 300;
+        }
+
+        .outfit-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .outfit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 36px;
+        }
+
+        .outfit-item-card {
+            background: var(--bg);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid var(--border-light);
+            transition: var(--transition);
+            position: relative;
+            animation: slideUp 0.5s ease both;
+        }
+
+        .outfit-item-card:nth-child(1) {
+            animation-delay: 0.05s;
+        }
+
+        .outfit-item-card:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .outfit-item-card:nth-child(3) {
+            animation-delay: 0.15s;
+        }
+
+        .outfit-item-card:nth-child(4) {
+            animation-delay: 0.2s;
+        }
+
+        .outfit-item-card:nth-child(5) {
+            animation-delay: 0.25s;
+        }
+
+        .outfit-item-card:nth-child(6) {
+            animation-delay: 0.3s;
+        }
+
+        .outfit-item-card:hover {
+            border-color: var(--accent-light);
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+
+        .outfit-item-category {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+
+        .outfit-item-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .outfit-item-details {
+            font-size: 13px;
+            color: var(--text-light);
+            font-weight: 300;
+        }
+
+        .outfit-item-color-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+            border: 1px solid var(--border);
+        }
+
+        .outfit-empty {
+            text-align: center;
+            padding: 80px 40px;
+            color: var(--text-light);
+        }
+
+        .outfit-empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.4;
+        }
+
+        .outfit-empty h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 22px;
+            color: var(--text-mid);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        /* ─── Buttons ─── */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-warm);
+            color: var(--text-mid);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-light);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid rgba(199, 80, 80, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(199, 80, 80, 0.08);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #4d7a4d;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-light);
+            padding: 8px 14px;
+        }
+
+        .btn-ghost:hover {
+            color: var(--text);
+            background: var(--bg-warm);
+        }
+
+        .btn-sm {
+            padding: 7px 14px;
+            font-size: 12px;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-light);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 16px;
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-warm);
+            color: var(--text);
+        }
+
+        .wardrobe-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .category-section {
+            margin-bottom: 36px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .category-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .category-badge {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: var(--accent-glow);
+            color: var(--accent);
+            letter-spacing: 0.5px;
+            text-transform: none;
+        }
+
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 14px;
+        }
+
+        .item-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            transition: var(--transition);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .item-card:hover {
+            border-color: var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .item-info h4 {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .item-info p {
+            font-size: 12px;
+            color: var(--text-light);
+            font-weight: 300;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .item-card:hover .item-actions {
+            opacity: 1;
+        }
+
+        /* ─── Modal ─── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(44, 37, 32, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-mid);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            background: var(--bg);
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-light);
+            font-weight: 300;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .checkbox-group span {
+            font-size: 14px;
+            color: var(--text-mid);
+        }
+
+        .pin-section {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-light);
+            margin-top: 24px;
+        }
+
+        .pin-section h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+        .pin-section p {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+
+        .pin-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .pin-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: var(--accent-glow);
+            border: 1px solid var(--accent-light);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--accent-dark);
+            font-weight: 500;
+        }
+
+        .pin-tag button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 15px;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .pin-tag button:hover {
+            color: var(--danger);
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            border: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .history-card:hover {
+            border-color: var(--border);
+        }
+
+        .history-date {
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            color: var(--accent);
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .history-items {
+            font-size: 14px;
+            color: var(--text-mid);
+        }
+
+        .history-items span {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+        }
+
+        .category-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .category-card:hover {
+            border-color: var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .category-info h4 {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .category-info .repeat-badge {
+            font-size: 11px;
+            margin-top: 4px;
+            color: var(--text-light);
+        }
+
+        .repeat-badge.allowed {
+            color: var(--success);
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 36px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid var(--border-light);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            background: var(--text);
+            color: var(--bg);
+            padding: 14px 22px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease, fadeOut 0.3s ease 2.5s forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+        }
+
+        /* Tablet (≤ 900px) */
+        @media (max-width: 900px) {
+            .outfit-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Mobile (≤ 768px) */
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 0 16px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+                padding: 20px 0 14px;
+                margin-bottom: 20px;
+            }
+
+            .header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .logo {
+                font-size: 26px;
+            }
+
+            .nav-tabs {
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                margin-bottom: 24px;
+            }
+
+            .nav-tabs::-webkit-scrollbar {
+                display: none;
+            }
+
+            .nav-tab {
+                padding: 9px 16px;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+
+            .outfit-display {
+                padding: 24px 20px;
+            }
+
+            .outfit-header {
+                flex-direction: column;
+                gap: 14px;
+            }
+
+            .outfit-actions {
+                flex-wrap: wrap;
+            }
+
+            .outfit-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+            .stat-number {
+                font-size: 28px;
+            }
+
+            .wardrobe-header {
+                margin-bottom: 18px;
+            }
+
+            .items-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .item-actions {
+                opacity: 1;
+            }
+
+            .categories-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .history-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 16px;
+            }
+
+            .admin-table-wrap {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .admin-table {
+                min-width: 480px;
+            }
+
+            .pin-section {
+                padding: 20px;
+            }
+
+            .modal-overlay {
+                align-items: flex-end;
+            }
+
+            .modal {
+                padding: 28px 20px;
+                margin: 0;
+                border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+                max-width: 100% !important;
+                width: 100%;
+                max-height: 92vh;
+            }
+
+            .toast-container {
+                bottom: 16px;
+                right: 16px;
+                left: 16px;
+            }
+
+            .toast {
+                text-align: center;
+            }
+
+            .site-footer {
+                margin-top: 40px;
+                padding: 24px 0 20px;
+            }
+        }
+
+        /* Small phones (≤ 480px) */
+        @media (max-width: 480px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .outfit-actions {
+                gap: 6px;
+            }
+
+            .btn.btn-sm {
+                padding: 7px 10px;
+                font-size: 12px;
+            }
+
+            .section-title {
+                font-size: 18px;
+            }
+        }
+
+
+        .shimmer {
+            background: linear-gradient(90deg, var(--bg-warm) 25%, var(--bg) 50%, var(--bg-warm) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius);
+            height: 80px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .empty-hanger {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 16px;
+            opacity: 0.25;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-mid);
+            font-weight: 400;
+        }
+
+        .user-badge .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--accent-glow);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .user-badge .admin-tag {
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 20px;
+            background: var(--accent);
+            color: white;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .btn-logout {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: var(--transition);
+            letter-spacing: 0.3px;
+        }
+
+        .btn-logout:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .btn-change-pw {
+            background: none;
+            border: 1px solid var(--border);
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .btn-change-pw:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .pw-field-wrap {
+            position: relative;
+        }
+
+        .pw-field-wrap input {
+            padding-right: 42px;
+        }
+
+        .pw-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-light);
+            font-size: 16px;
+            line-height: 1;
+            padding: 0;
+            transition: var(--transition);
+        }
+
+        .pw-toggle:hover {
+            color: var(--text-mid);
+        }
+
+        .pw-strength {
+            height: 3px;
+            border-radius: 2px;
+            margin-top: 6px;
+            background: var(--border);
+            overflow: hidden;
+        }
+
+        .pw-strength-bar {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease, background 0.3s ease;
+            width: 0%;
+        }
+
+        .pw-hint {
+            font-size: 11px;
+            margin-top: 4px;
+            color: var(--text-light);
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+
+        .admin-table th {
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-light);
+            text-align: left;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .admin-table td {
+            padding: 14px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .admin-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .admin-table tr:hover td {
+            background: var(--accent-glow);
+        }
+
+        .admin-role-badge {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .admin-role-badge.admin {
+            background: var(--accent-glow);
+            color: var(--accent-dark);
+        }
+
+        .admin-role-badge.user {
+            background: var(--bg-warm);
+            color: var(--text-light);
+        }
+
+        .delete-modal-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(199, 80, 80, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 26px;
+            animation: pulseIcon 0.4s ease;
+        }
+
+        @keyframes pulseIcon {
+            0% {
+                transform: scale(0.6);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .delete-modal-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .delete-modal-body {
+            font-size: 14px;
+            color: var(--text-mid);
+            text-align: center;
+            line-height: 1.7;
+            margin-bottom: 28px;
+        }
+
+        .delete-modal-body strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .delete-modal-warning {
+            background: rgba(199, 80, 80, 0.07);
+            border: 1px solid rgba(199, 80, 80, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            font-size: 12px;
+            color: var(--danger);
+            text-align: center;
+            margin-bottom: 28px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .delete-modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .delete-modal-actions button {
+            flex: 1;
+        }
+
+        .btn-danger-solid {
+            background: var(--danger);
+            color: white;
+            border: none;
+        }
+
+        .btn-danger-solid:hover {
+            background: #b04040;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(199, 80, 80, 0.3);
+        }
+
+        @keyframes shakeModal {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20% {
+                transform: translateX(-6px);
+            }
+
+            40% {
+                transform: translateX(6px);
+            }
+
+            60% {
+                transform: translateX(-4px);
+            }
+
+            80% {
+                transform: translateX(4px);
+            }
+        }
+
+        .modal.shake {
+            animation: shakeModal 0.4s ease;
+        }
+
+        .site-footer {
+            margin-top: 60px;
+            padding: 32px 0 28px;
+            border-top: 1px solid var(--border-light);
+            text-align: center;
+            position: relative;
+        }
+
+
+        .footer-brand {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-mid);
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .footer-brand span {
+            color: var(--accent);
+        }
+
+        .footer-credit {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            color: var(--text-light);
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+
+        .footer-credit .credit-name {
+            font-weight: 500;
+            color: var(--text-mid);
+            letter-spacing: 0.3px;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer-credit .credit-name:hover {
+            color: var(--accent);
+        }
+
+        .footer-divider {
+            display: inline-block;
+            width: 30px;
+            height: 1px;
+            background: var(--border);
+            vertical-align: middle;
+            margin: 0 10px;
+        }
+
+        .footer-year {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--text-light);
+            margin-top: 10px;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div>
+                <div class="logo">Libas<span>.</span></div>
+            </div>
+            <div class="header-right">
+                <div class="header-date" id="headerDate"></div>
+                <div class="user-badge" id="userBadge" style="display:none;">
+                    <div class="user-avatar" id="userAvatar"></div>
+                    <span id="userDisplayName"></span>
+                    <span class="admin-tag" id="adminTag" style="display:none;">Admin</span>
+                </div>
+                <button class="btn-change-pw" onclick="openChangePwModal()" title="Change password">🔑</button>
+                <button class="btn-logout" onclick="handleLogout()">Sign Out</button>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-panel="today" onclick="switchPanel('today')">Today's Outfit</button>
+            <button class="nav-tab" data-panel="wardrobe" onclick="switchPanel('wardrobe')">Wardrobe</button>
+            <button class="nav-tab" data-panel="categories" onclick="switchPanel('categories')">Categories</button>
+            <button class="nav-tab" data-panel="history" onclick="switchPanel('history')">History</button>
+            <button class="nav-tab" data-panel="excluded" onclick="switchPanel('excluded')">Excluded</button>
+            <button class="nav-tab" data-panel="admin" onclick="switchPanel('admin')" id="adminNavTab"
+                style="display:none;">Admin</button>
+        </nav>
+
+        <div class="panel active" id="panel-today">
+            <div class="stats-row" id="statsRow"></div>
+
+            <div class="outfit-display" id="outfitDisplay">
+                <div class="shimmer" style="margin-bottom:12px;"></div>
+                <div class="shimmer"></div>
+            </div>
+
+            <div class="pin-section">
+                <h3>Pin Items for Today</h3>
+                <p>Select specific items you want included in today's outfit. Regenerate to apply.</p>
+                <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:end;">
+                    <div class="form-group" style="margin-bottom:0; flex:1; min-width:200px;">
+                        <select id="pinItemSelect" style="padding:10px 14px;">
+                            <option value="">Choose an item to pin…</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="addPin()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        Pin Item
+                    </button>
+                </div>
+                <div class="pin-list" id="pinList"></div>
+            </div>
+        </div>
+
+        <div class="panel" id="panel-wardrobe">
+            <div class="wardrobe-header">
+                <h2 class="section-title">My Wardrobe</h2>
+                <button class="btn btn-primary" onclick="openItemModal()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Add Item
+                </button>
+            </div>
+            <div id="wardrobeContent">
+                <div class="shimmer" style="margin-bottom:12px;"></div>
+                <div class="shimmer"></div>
+            </div>
+        </div>
+
+        <div class="panel" id="panel-categories">
+            <div class="wardrobe-header">
+                <h2 class="section-title">Categories</h2>
+                <button class="btn btn-primary" onclick="openCategoryModal()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Add Category
+                </button>
+            </div>
+            <div class="categories-grid" id="categoriesGrid"></div>
+        </div>
+
+        <div class="panel" id="panel-history">
+            <div class="wardrobe-header">
+                <h2 class="section-title">Outfit History</h2>
+            </div>
+            <div class="history-list" id="historyList"></div>
+        </div>
+
+        <div class="panel" id="panel-excluded">
+            <div class="wardrobe-header">
+                <h2 class="section-title">Excluded Outfits</h2>
+            </div>
+            <div class="history-list" id="excludedList"></div>
+        </div>
+
+        <div class="panel" id="panel-admin">
+            <div class="wardrobe-header">
+                <h2 class="section-title">User Management</h2>
+            </div>
+            <div
+                style="background:var(--bg-card);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow);border:1px solid var(--border-light);">
+                <div class="admin-table-wrap">
+                    <table class="admin-table" id="adminUsersTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Joined</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUsersBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer"
+        style="max-width:960px;margin-left:auto;margin-right:auto;padding-left:24px;padding-right:24px;">
+        <div class="footer-brand">Libas<span>.</span></div>
+        <div class="footer-credit">
+            Crafted with care by <a class="credit-name" href="https://www.linkedin.com/in/mammad-mammadov/"
+                target="_blank" rel="noopener noreferrer">Mammad Mammadov</a>
+        </div>
+        <div class="footer-year">
+            <span class="footer-divider"></span>2026<span class="footer-divider"></span>
+        </div>
+    </footer>
+
+    <div class="modal-overlay" id="itemModal">
+        <div class="modal">
+            <h2 id="itemModalTitle">Add Clothing Item</h2>
+            <input type="hidden" id="editItemId" value="">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="itemName" placeholder="e.g., Navy Oxford Shirt">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="itemCategory"></select>
+            </div>
+            <div class="form-group">
+                <label>Color</label>
+                <input type="text" id="itemColor" placeholder="e.g., Navy Blue">
+            </div>
+            <div class="form-group">
+                <label>Brand (optional)</label>
+                <input type="text" id="itemBrand" placeholder="e.g., Ralph Lauren">
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeItemModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveItem()">Save Item</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="categoryModal">
+        <div class="modal">
+            <h2 id="catModalTitle">Add Category</h2>
+            <input type="hidden" id="editCatId" value="">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="catName" placeholder="e.g., Watches">
+            </div>
+            <div class="form-group">
+                <label class="checkbox-group">
+                    <input type="checkbox" id="catRepeat">
+                    <span>Allow repeating on consecutive days</span>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeCategoryModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCategory()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="resetPwModal">
+        <div class="modal" style="max-width:440px;">
+            <h2 style="margin-bottom:6px;">Reset Password</h2>
+            <p style="font-size:13px;color:var(--text-light);font-weight:300;margin-bottom:24px;">
+                Set a new password for <strong id="resetPwUsername"></strong>.
+            </p>
+
+            <div id="resetPwSuccess"
+                style="display:none;background:rgba(91,140,90,0.1);border:1px solid rgba(91,140,90,0.25);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--success);margin-bottom:18px;">
+                ✓ Password has been reset successfully!
+            </div>
+            <div id="resetPwError"
+                style="display:none;background:rgba(199,80,80,0.08);border:1px solid rgba(199,80,80,0.2);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--danger);margin-bottom:18px;">
+            </div>
+
+            <div class="form-group">
+                <label>New Password</label>
+                <div class="pw-field-wrap">
+                    <input type="password" id="resetPwNew" placeholder="At least 6 characters"
+                        autocomplete="new-password">
+                    <button class="pw-toggle" type="button" onclick="togglePw('resetPwNew', this)">👁</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Confirm New Password</label>
+                <div class="pw-field-wrap">
+                    <input type="password" id="resetPwConfirm" placeholder="Repeat new password"
+                        autocomplete="new-password">
+                    <button class="pw-toggle" type="button" onclick="togglePw('resetPwConfirm', this)">👁</button>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeResetPwModal()">Cancel</button>
+                <button class="btn btn-primary" id="resetPwBtn" onclick="submitResetPassword()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Set New Password
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal" id="confirmModalBox" style="max-width:420px;text-align:center;">
+            <div class="delete-modal-icon" id="confirmModalIcon"></div>
+            <div class="delete-modal-title" id="confirmModalTitle"></div>
+            <div class="delete-modal-body" id="confirmModalBody"></div>
+            <div class="delete-modal-warning" id="confirmModalWarning"></div>
+            <div class="delete-modal-actions">
+                <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+                <button class="btn btn-danger-solid" id="confirmModalBtn" onclick="_runConfirmCallback()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="flex-shrink:0;">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4h6v2" />
+                    </svg>
+                    <span id="confirmModalBtnLabel"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="changePwModal">
+        <div class="modal" style="max-width:440px;">
+            <h2 style="margin-bottom:6px;">Change Password</h2>
+            <p style="font-size:13px;color:var(--text-light);font-weight:300;margin-bottom:24px;">Update your account
+                password below.</p>
+
+            <div id="changePwSuccess"
+                style="display:none;background:rgba(91,140,90,0.1);border:1px solid rgba(91,140,90,0.25);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--success);margin-bottom:18px;">
+                ✓ Password updated successfully!
+            </div>
+            <div id="changePwError"
+                style="display:none;background:rgba(199,80,80,0.08);border:1px solid rgba(199,80,80,0.2);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--danger);margin-bottom:18px;">
+            </div>
+
+            <div class="form-group">
+                <label>Current Password</label>
+                <div class="pw-field-wrap">
+                    <input type="password" id="cpCurrent" placeholder="Enter your current password"
+                        autocomplete="current-password">
+                    <button class="pw-toggle" type="button" onclick="togglePw('cpCurrent', this)">👁</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>New Password</label>
+                <div class="pw-field-wrap">
+                    <input type="password" id="cpNew" placeholder="At least 6 characters" autocomplete="new-password"
+                        oninput="updatePwStrength(this.value)">
+                    <button class="pw-toggle" type="button" onclick="togglePw('cpNew', this)">👁</button>
+                </div>
+                <div class="pw-strength">
+                    <div class="pw-strength-bar" id="pwStrengthBar"></div>
+                </div>
+                <div class="pw-hint" id="pwStrengthHint">Enter a new password</div>
+            </div>
+
+            <div class="form-group">
+                <label>Confirm New Password</label>
+                <div class="pw-field-wrap">
+                    <input type="password" id="cpConfirm" placeholder="Repeat new password" autocomplete="new-password">
+                    <button class="pw-toggle" type="button" onclick="togglePw('cpConfirm', this)">👁</button>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeChangePwModal()">Cancel</button>
+                <button class="btn btn-primary" id="changePwBtn" onclick="submitChangePassword()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Update Password
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        let categories = [];
+        let items = [];
+        let currentOutfit = null;
+        let skippedHashes = [];
+        let pins = [];
+        let currentUser = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const now = new Date();
+            document.getElementById('headerDate').textContent = now.toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+            await loadCurrentUser();
+            loadAll();
+        });
+
+        async function loadCurrentUser() {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (res.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                currentUser = await res.json();
+                const badge = document.getElementById('userBadge');
+                const avatar = document.getElementById('userAvatar');
+                const displayName = document.getElementById('userDisplayName');
+                badge.style.display = 'flex';
+                avatar.textContent = currentUser.username.charAt(0);
+                displayName.textContent = currentUser.username;
+                if (currentUser.is_admin) {
+                    document.getElementById('adminTag').style.display = 'inline';
+                    document.getElementById('adminNavTab').style.display = '';
+                }
+            } catch (e) {
+                window.location.href = '/login';
+            }
+        }
+
+        async function handleLogout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        async function loadAll() {
+            await loadCategories();
+            await loadItems();
+            await loadStats();
+            await loadPins();
+            await loadTodayOutfit();
+        }
+
+        async function api(url, method = 'GET', body = null) {
+            const opts = { method, headers: { 'Content-Type': 'application/json' } };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(url, opts);
+            return res.json();
+        }
+
+        function toast(msg) {
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.textContent = msg;
+            document.getElementById('toastContainer').appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+
+        function switchPanel(name) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`panel-${name}`).classList.add('active');
+            document.querySelector(`.nav-tab[data-panel="${name}"]`).classList.add('active');
+
+            if (name === 'history') loadHistory();
+            if (name === 'excluded') loadExcluded();
+            if (name === 'wardrobe') renderWardrobe();
+            if (name === 'categories') renderCategories();
+            if (name === 'admin') loadAdminUsers();
+        }
+
+        async function loadStats() {
+            const data = await api('/api/stats');
+            document.getElementById('statsRow').innerHTML = `
+            <div class="stat-card">
+                <div class="stat-number">${data.total_items}</div>
+                <div class="stat-label">Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${data.total_categories}</div>
+                <div class="stat-label">Categories</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${data.total_outfits_worn}</div>
+                <div class="stat-label">Outfits Worn</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${data.total_excluded}</div>
+                <div class="stat-label">Excluded</div>
+            </div>
+        `;
+        }
+
+        async function loadCategories() {
+            categories = await api('/api/categories');
+            populateCategorySelects();
+        }
+
+        function populateCategorySelects() {
+            const selects = [document.getElementById('itemCategory'), document.getElementById('pinItemSelect')];
+            // Item category select
+            selects[0].innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            // Pin item select
+            selects[1].innerHTML = '<option value="">Choose an item to pin…</option>' +
+                items.map(i => `<option value="${i.id}">${i.name} (${i.category_name})</option>`).join('');
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('categoriesGrid');
+            if (categories.length === 0) {
+                grid.innerHTML = '<p style="color:var(--text-light);">No categories yet. Add one to get started.</p>';
+                return;
+            }
+            grid.innerHTML = categories.map(c => `
+            <div class="category-card">
+                <div class="category-info">
+                    <h4>${esc(c.name)}</h4>
+                    <div class="repeat-badge ${c.allow_repeat ? 'allowed' : ''}">
+                        ${c.allow_repeat ? '↻ Repeats allowed' : '✕ No consecutive repeats'}
+                    </div>
+                </div>
+                <div style="display:flex;gap:4px;">
+                    <button class="btn-icon" title="Edit" onclick="editCategory(${c.id})">✎</button>
+                    <button class="btn-icon" title="Delete" onclick="deleteCategory(${c.id})" style="color:var(--danger);">✕</button>
+                </div>
+            </div>
+        `).join('');
+        }
+
+        function openCategoryModal(id = null) {
+            document.getElementById('editCatId').value = id || '';
+            document.getElementById('catModalTitle').textContent = id ? 'Edit Category' : 'Add Category';
+            if (id) {
+                const c = categories.find(x => x.id === id);
+                document.getElementById('catName').value = c.name;
+                document.getElementById('catRepeat').checked = !!c.allow_repeat;
+            } else {
+                document.getElementById('catName').value = '';
+                document.getElementById('catRepeat').checked = false;
+            }
+            document.getElementById('categoryModal').classList.add('active');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.remove('active');
+        }
+
+        function editCategory(id) { openCategoryModal(id); }
+
+        async function saveCategory() {
+            const id = document.getElementById('editCatId').value;
+            const name = document.getElementById('catName').value.trim();
+            const allow_repeat = document.getElementById('catRepeat').checked;
+            if (!name) { toast('Please enter a category name'); return; }
+
+            if (id) {
+                await api(`/api/categories/${id}`, 'PUT', { name, allow_repeat });
+                toast('Category updated');
+            } else {
+                const res = await api('/api/categories', 'POST', { name, allow_repeat });
+                if (res.error) { toast(res.error); return; }
+                toast('Category added');
+            }
+            closeCategoryModal();
+            await loadCategories();
+            renderCategories();
+        }
+
+        async function deleteCategory(id) {
+            const cat = categories.find(c => c.id === id);
+            showConfirmModal({
+                icon: '🗂️',
+                title: 'Delete Category',
+                body: `You are about to delete the category <strong>${esc(cat ? cat.name : '')}</strong> and all clothing items inside it.`,
+                warning: '⚠ This cannot be undone. All items in this category will also be removed.',
+                btnLabel: 'Delete Category',
+                callback: async () => {
+                    await api(`/api/categories/${id}`, 'DELETE');
+                    toast('Category deleted');
+                    await loadCategories();
+                    await loadItems();
+                    renderCategories();
+                }
+            });
+        }
+
+        async function loadItems() {
+            items = await api('/api/items');
+            populateCategorySelects();
+        }
+
+        function renderWardrobe() {
+            const container = document.getElementById('wardrobeContent');
+            if (items.length === 0) {
+                container.innerHTML = `
+                <div class="outfit-empty">
+                    <div class="outfit-empty-icon">👕</div>
+                    <h3>Your wardrobe is empty</h3>
+                    <p>Add some clothing items to get started with outfit planning.</p>
+                </div>`;
+                return;
+            }
+
+            // Group by category
+            const grouped = {};
+            items.forEach(item => {
+                const cat = item.category_name;
+                if (!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(item);
+            });
+
+            const catObj = {};
+            categories.forEach(c => catObj[c.name] = c);
+
+            container.innerHTML = Object.entries(grouped).map(([catName, catItems]) => `
+            <div class="category-section">
+                <div class="category-label">
+                    ${esc(catName)}
+                    ${catObj[catName]?.allow_repeat ? '<span class="category-badge">repeats ok</span>' : ''}
+                </div>
+                <div class="items-grid">
+                    ${catItems.map(item => `
+                        <div class="item-card">
+                            <div class="item-info">
+                                <h4>${esc(item.name)}</h4>
+                                <p>
+                                    ${item.color ? `<span class="outfit-item-color-dot" style="background:${colorToCSS(item.color)}"></span>${esc(item.color)}` : ''}
+                                    ${item.brand ? ` · ${esc(item.brand)}` : ''}
+                                </p>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn-icon" title="Edit" onclick="editItem(${item.id})">✎</button>
+                                <button class="btn-icon" title="Delete" onclick="deleteItem(${item.id})" style="color:var(--danger);">✕</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+        }
+
+        function openItemModal(id = null) {
+            document.getElementById('editItemId').value = id || '';
+            document.getElementById('itemModalTitle').textContent = id ? 'Edit Item' : 'Add Clothing Item';
+            if (id) {
+                const item = items.find(x => x.id === id);
+                document.getElementById('itemName').value = item.name;
+                document.getElementById('itemCategory').value = item.category_id;
+                document.getElementById('itemColor').value = item.color || '';
+                document.getElementById('itemBrand').value = item.brand || '';
+            } else {
+                document.getElementById('itemName').value = '';
+                document.getElementById('itemColor').value = '';
+                document.getElementById('itemBrand').value = '';
+            }
+            document.getElementById('itemModal').classList.add('active');
+        }
+
+        function closeItemModal() {
+            document.getElementById('itemModal').classList.remove('active');
+        }
+
+        function editItem(id) { openItemModal(id); }
+
+        async function saveItem() {
+            const id = document.getElementById('editItemId').value;
+            const data = {
+                name: document.getElementById('itemName').value.trim(),
+                category_id: parseInt(document.getElementById('itemCategory').value),
+                color: document.getElementById('itemColor').value.trim(),
+                brand: document.getElementById('itemBrand').value.trim()
+            };
+            if (!data.name) { toast('Please enter an item name'); return; }
+
+            if (id) {
+                await api(`/api/items/${id}`, 'PUT', data);
+                toast('Item updated');
+            } else {
+                await api('/api/items', 'POST', data);
+                toast('Item added');
+            }
+            closeItemModal();
+            await loadItems();
+            await loadStats();
+            renderWardrobe();
+        }
+
+        async function deleteItem(id) {
+            const item = items.find(i => i.id === id);
+            showConfirmModal({
+                icon: '👕',
+                title: 'Remove Item',
+                body: `Remove <strong>${esc(item ? item.name : '')}</strong> from your wardrobe?`,
+                warning: '⚠ The item will be hidden from your wardrobe and future outfit suggestions.',
+                btnLabel: 'Remove Item',
+                callback: async () => {
+                    await api(`/api/items/${id}`, 'DELETE');
+                    toast('Item removed');
+                    await loadItems();
+                    await loadStats();
+                    renderWardrobe();
+                }
+            });
+        }
+
+        async function loadTodayOutfit() {
+            const display = document.getElementById('outfitDisplay');
+            try {
+                const data = await api('/api/outfit/today');
+                if (data.error) {
+                    display.innerHTML = `
+                    <div class="outfit-empty">
+                        <div class="outfit-empty-icon">✨</div>
+                        <h3>No outfit available</h3>
+                        <p>${esc(data.error)}</p>
+                    </div>`;
+                    return;
+                }
+                currentOutfit = data;
+                skippedHashes = [];
+                renderOutfit(data);
+            } catch (e) {
+                display.innerHTML = `
+                <div class="outfit-empty">
+                    <div class="outfit-empty-icon">⚠</div>
+                    <h3>Could not load outfit</h3>
+                    <p>Please try refreshing the page.</p>
+                </div>`;
+            }
+        }
+
+        function renderOutfit(outfit) {
+            const display = document.getElementById('outfitDisplay');
+            display.innerHTML = `
+            <div class="outfit-header">
+                <div>
+                    <div class="outfit-title">Your Look for Today</div>
+                    <div class="outfit-subtitle">${outfit.from_history ? 'Saved earlier today' : 'Freshly generated'} · ${outfit.items.length} pieces</div>
+                </div>
+                <div class="outfit-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="regenerateOutfit()" title="Get a different outfit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+                        Shuffle
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="excludeOutfit()" title="Never suggest this combination again">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                        Exclude
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="acceptOutfit()" title="Wear this today">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                        Wear This
+                    </button>
+                </div>
+            </div>
+            <div class="outfit-grid">
+                ${outfit.items.map(item => `
+                    <div class="outfit-item-card">
+                        <div class="outfit-item-category">${esc(item.category_name)}</div>
+                        <div class="outfit-item-name">${esc(item.item_name)}</div>
+                        <div class="outfit-item-details">
+                            ${item.item_color ? `<span class="outfit-item-color-dot" style="background:${colorToCSS(item.item_color)}"></span>${esc(item.item_color)}` : ''}
+                            ${item.item_brand ? ` · ${esc(item.item_brand)}` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        }
+
+        async function regenerateOutfit() {
+            if (currentOutfit) skippedHashes.push(currentOutfit.hash);
+            const data = await api('/api/outfit/regenerate', 'POST', { skip_hashes: skippedHashes });
+            if (data.error) {
+                toast(data.error);
+                return;
+            }
+            currentOutfit = data;
+            renderOutfit(data);
+            toast('New outfit generated');
+        }
+
+        async function acceptOutfit() {
+            if (!currentOutfit) return;
+            await api('/api/outfit/accept', 'POST', { hash: currentOutfit.hash, items: currentOutfit.items });
+            toast('Outfit saved as today\'s look!');
+            await loadStats();
+        }
+
+        async function excludeOutfit() {
+            if (!currentOutfit) return;
+            await api('/api/outfit/exclude', 'POST', { hash: currentOutfit.hash, items: currentOutfit.items });
+            toast('Outfit excluded permanently');
+            await loadStats();
+            regenerateOutfit();
+        }
+
+        // ─── Pins ──────────────────────────────────────────
+        async function loadPins() {
+            pins = await api('/api/pins');
+            renderPins();
+        }
+
+        function renderPins() {
+            const list = document.getElementById('pinList');
+            if (pins.length === 0) {
+                list.innerHTML = '<span style="font-size:13px;color:var(--text-light);font-style:italic;">No items pinned for today.</span>';
+                return;
+            }
+            list.innerHTML = pins.map(p => `
+            <span class="pin-tag">
+                📌 ${esc(p.item_name)} <small style="opacity:0.7;">(${esc(p.category_name)})</small>
+                <button onclick="removePin(${p.id})">✕</button>
+            </span>
+        `).join('');
+        }
+
+        async function addPin() {
+            const select = document.getElementById('pinItemSelect');
+            const itemId = parseInt(select.value);
+            if (!itemId) { toast('Select an item to pin'); return; }
+            await api('/api/pins', 'POST', { item_id: itemId });
+            select.value = '';
+            await loadPins();
+            toast('Item pinned for today');
+        }
+
+        async function removePin(pinId) {
+            await api(`/api/pins/${pinId}`, 'DELETE');
+            await loadPins();
+            toast('Pin removed');
+        }
+
+        // ─── History ───────────────────────────────────────
+        async function loadHistory() {
+            const data = await api('/api/history');
+            const list = document.getElementById('historyList');
+            if (data.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:40px;">No outfit history yet.</p>';
+                return;
+            }
+            list.innerHTML = data.map(h => `
+            <div class="history-card">
+                <div>
+                    <div class="history-date">${formatDate(h.worn_date)}</div>
+                    <div class="history-items">
+                        ${h.outfit_items.map(i => `<span>${esc(i.item_name)}</span>`).join(' · ')}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        }
+
+        async function loadExcluded() {
+            const data = await api('/api/outfit/excluded');
+            const list = document.getElementById('excludedList');
+            if (data.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-light);text-align:center;padding:40px;">No excluded outfits.</p>';
+                return;
+            }
+            list.innerHTML = data.map(e => `
+            <div class="history-card">
+                <div>
+                    <div class="history-date">Excluded ${formatDate(e.excluded_at)}</div>
+                    <div class="history-items">
+                        ${e.outfit_items.map(i => `<span>${esc(i.item_name)}</span>`).join(' · ')}
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="restoreExcluded(${e.id})">Restore</button>
+            </div>
+        `).join('');
+        }
+
+        async function restoreExcluded(id) {
+            await api(`/api/outfit/excluded/${id}`, 'DELETE');
+            toast('Outfit restored');
+            await loadStats();
+            loadExcluded();
+        }
+
+        // ─── Helpers ───────────────────────────────────────
+        function esc(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatDate(d) {
+            if (!d) return '';
+            return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric'
+            });
+        }
+
+        const colorMap = {
+            'black': '#222', 'white': '#f5f5f5', 'navy': '#1a237e', 'navy blue': '#1a237e',
+            'red': '#c62828', 'blue': '#1565c0', 'green': '#2e7d32', 'grey': '#757575',
+            'gray': '#757575', 'brown': '#5d4037', 'beige': '#d7ccc8', 'cream': '#fff8e1',
+            'khaki': '#c0b283', 'olive': '#827717', 'burgundy': '#6a1b29', 'pink': '#e91e63',
+            'yellow': '#f9a825', 'orange': '#e65100', 'purple': '#7b1fa2', 'tan': '#d2b48c',
+            'charcoal': '#424242', 'light blue': '#64b5f6', 'dark blue': '#0d47a1',
+            'dark green': '#1b5e20', 'maroon': '#7f0000', 'teal': '#00897b', 'coral': '#ff7043',
+            'lavender': '#b39ddb', 'indigo': '#283593', 'gold': '#ffc107', 'silver': '#bdbdbd',
+        };
+
+        function colorToCSS(colorName) {
+            if (!colorName) return '#ccc';
+            const lower = colorName.toLowerCase().trim();
+            return colorMap[lower] || '#ccc';
+        }
+
+        // Close modals on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+
+        // Close modals on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+            }
+        });
+
+        // ─── Admin Functions ──────────────────────────────
+        async function loadAdminUsers() {
+            const users = await api('/api/admin/users');
+            const tbody = document.getElementById('adminUsersBody');
+            if (!users || users.error) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-light);">Access denied</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => {
+                const date = new Date(u.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                const isSelf = u.id === currentUser.user_id;
+                return `
+                    <tr>
+                        <td style="font-weight:500;">${esc(u.username)}${isSelf ? ' <span style="color:var(--text-light);font-weight:300;">(you)</span>' : ''}</td>
+                        <td><span class="admin-role-badge ${u.is_admin ? 'admin' : 'user'}">${u.is_admin ? 'Admin' : 'User'}</span></td>
+                        <td style="color:var(--text-light);font-size:13px;">${date}</td>
+                        <td style="text-align:right;">
+                            ${isSelf ? '' : `
+                                <button class="btn-icon" title="${u.is_admin ? 'Remove admin' : 'Make admin'}" onclick="toggleAdmin(${u.id})" style="font-size:13px;">${u.is_admin ? '↓' : '↑'}</button>
+                                <button class="btn-icon" title="Reset password" onclick="openResetPwModal(${u.id}, '${esc(u.username)}')" style="font-size:13px;">🔑</button>
+                                <button class="btn-icon" title="Delete user" onclick="deleteUser(${u.id}, '${esc(u.username)}')" style="color:var(--danger);font-size:13px;">✕</button>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function toggleAdmin(userId) {
+            await api(`/api/admin/users/${userId}/toggle-admin`, 'PUT');
+            toast('User role updated');
+            loadAdminUsers();
+        }
+
+        // ─── Admin: Reset Password ─────────────────────────
+        let _resetPwUserId = null;
+
+        function openResetPwModal(userId, username) {
+            _resetPwUserId = userId;
+            document.getElementById('resetPwUsername').textContent = username;
+            document.getElementById('resetPwNew').value = '';
+            document.getElementById('resetPwConfirm').value = '';
+            document.getElementById('resetPwError').style.display = 'none';
+            document.getElementById('resetPwSuccess').style.display = 'none';
+            document.getElementById('resetPwBtn').disabled = false;
+            document.getElementById('resetPwBtn').innerHTML = `
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Set New Password`;
+            document.getElementById('resetPwModal').classList.add('active');
+            setTimeout(() => document.getElementById('resetPwNew').focus(), 100);
+        }
+
+        function closeResetPwModal() {
+            document.getElementById('resetPwModal').classList.remove('active');
+            _resetPwUserId = null;
+        }
+
+        async function submitResetPassword() {
+            const newPw = document.getElementById('resetPwNew').value;
+            const confirm = document.getElementById('resetPwConfirm').value;
+            const errorEl = document.getElementById('resetPwError');
+            const successEl = document.getElementById('resetPwSuccess');
+
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+
+            if (!newPw || !confirm) {
+                errorEl.textContent = 'Please fill in both fields.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            if (newPw !== confirm) {
+                errorEl.textContent = 'Passwords do not match.';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            const btn = document.getElementById('resetPwBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving…';
+
+            try {
+                const res = await api(`/api/admin/users/${_resetPwUserId}/reset-password`, 'POST', { new_password: newPw });
+                if (res.error) {
+                    errorEl.textContent = res.error;
+                    errorEl.style.display = 'block';
+                } else {
+                    successEl.style.display = 'block';
+                    setTimeout(() => closeResetPwModal(), 1600);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Set New Password`;
+            }
+        }
+
+        // ─── Generic Confirm Modal ─────────────────────────
+        let _confirmCallback = null;
+
+        function showConfirmModal({ icon, title, body, warning, btnLabel, callback }) {
+            document.getElementById('confirmModalIcon').textContent = icon;
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalBody').innerHTML = body;
+            document.getElementById('confirmModalWarning').innerHTML = warning;
+            document.getElementById('confirmModalBtnLabel').textContent = btnLabel;
+            _confirmCallback = callback;
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+            _confirmCallback = null;
+        }
+
+        async function _runConfirmCallback() {
+            if (!_confirmCallback) return;
+            const btn = document.getElementById('confirmModalBtn');
+            const label = document.getElementById('confirmModalBtnLabel');
+            btn.disabled = true;
+            label.textContent = 'Please wait…';
+            try {
+                await _confirmCallback();
+                closeConfirmModal();
+            } catch (err) {
+                const box = document.getElementById('confirmModalBox');
+                box.classList.add('shake');
+                setTimeout(() => box.classList.remove('shake'), 500);
+                toast(err.message || 'Something went wrong');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function deleteUser(userId, username) {
+            showConfirmModal({
+                icon: '🗑️',
+                title: 'Delete Account',
+                body: `You are about to permanently delete <strong>${esc(username)}</strong>'s account.`,
+                warning: '⚠ This action cannot be undone. All wardrobe data,<br>outfit history, and settings will be erased.',
+                btnLabel: 'Delete User',
+                callback: async () => {
+                    const res = await api(`/api/admin/users/${userId}`, 'DELETE');
+                    if (res.error) throw new Error(res.error);
+                    toast('User deleted successfully');
+                    loadAdminUsers();
+                }
+            });
+        }
+
+        // ─── Change Password ──────────────────────────────
+        function openChangePwModal() {
+            // Reset state
+            ['cpCurrent', 'cpNew', 'cpConfirm'].forEach(id => {
+                document.getElementById(id).value = '';
+                document.getElementById(id).type = 'password';
+            });
+            document.getElementById('changePwSuccess').style.display = 'none';
+            document.getElementById('changePwError').style.display = 'none';
+            document.getElementById('pwStrengthBar').style.width = '0%';
+            document.getElementById('pwStrengthHint').textContent = 'Enter a new password';
+            document.getElementById('changePwBtn').disabled = false;
+            document.getElementById('changePwBtn').innerHTML = `
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Update Password`;
+            document.getElementById('changePwModal').classList.add('active');
+            setTimeout(() => document.getElementById('cpCurrent').focus(), 100);
+        }
+
+        function closeChangePwModal() {
+            document.getElementById('changePwModal').classList.remove('active');
+        }
+
+        function togglePw(inputId, btn) {
+            const input = document.getElementById(inputId);
+            input.type = input.type === 'password' ? 'text' : 'password';
+            btn.textContent = input.type === 'password' ? '👁' : '🙈';
+        }
+
+        function updatePwStrength(pw) {
+            const bar = document.getElementById('pwStrengthBar');
+            const hint = document.getElementById('pwStrengthHint');
+            if (!pw) {
+                bar.style.width = '0%';
+                hint.textContent = 'Enter a new password';
+                hint.style.color = 'var(--text-light)';
+                return;
+            }
+            let score = 0;
+            if (pw.length >= 6) score++;
+            if (pw.length >= 10) score++;
+            if (/[A-Z]/.test(pw)) score++;
+            if (/[0-9]/.test(pw)) score++;
+            if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+            const levels = [
+                { w: '20%', bg: '#e57373', label: 'Too short' },
+                { w: '40%', bg: '#e57373', label: 'Weak' },
+                { w: '55%', bg: '#ffb74d', label: 'Fair' },
+                { w: '75%', bg: '#81c784', label: 'Good' },
+                { w: '100%', bg: 'var(--success)', label: 'Strong 💪' },
+            ];
+            const lvl = levels[Math.min(score, 4)];
+            bar.style.width = lvl.w;
+            bar.style.background = lvl.bg;
+            hint.textContent = lvl.label;
+            hint.style.color = lvl.bg;
+        }
+
+        async function submitChangePassword() {
+            const current = document.getElementById('cpCurrent').value;
+            const newPw = document.getElementById('cpNew').value;
+            const confirm = document.getElementById('cpConfirm').value;
+            const errorEl = document.getElementById('changePwError');
+            const successEl = document.getElementById('changePwSuccess');
+
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+
+            if (!current || !newPw || !confirm) {
+                errorEl.textContent = 'Please fill in all fields.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            if (newPw !== confirm) {
+                errorEl.textContent = 'New passwords do not match.';
+                errorEl.style.display = 'block';
+                document.getElementById('cpConfirm').focus();
+                return;
+            }
+
+            const btn = document.getElementById('changePwBtn');
+            btn.disabled = true;
+            btn.textContent = 'Updating…';
+
+            try {
+                const res = await api('/api/auth/change-password', 'POST', {
+                    current_password: current,
+                    new_password: newPw
+                });
+                if (res.error) {
+                    errorEl.textContent = res.error;
+                    errorEl.style.display = 'block';
+                } else {
+                    successEl.style.display = 'block';
+                    ['cpCurrent', 'cpNew', 'cpConfirm'].forEach(id => document.getElementById(id).value = '');
+                    document.getElementById('pwStrengthBar').style.width = '0%';
+                    document.getElementById('pwStrengthHint').textContent = 'Enter a new password';
+                    document.getElementById('pwStrengthHint').style.color = 'var(--text-light)';
+                    setTimeout(() => closeChangePwModal(), 1800);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Update Password`;
+            }
+        }
+    </script>
+
+</body>
+
+</html>
